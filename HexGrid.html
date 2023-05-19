@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>hexagons</title>
+<meta charset="UTF-8">
+
+<style>
+
+*{
+  margin: 0;
+  padding: 0;
+  /*overflow: hidden;*/
+  pointer-events:none;
+  overflow: visible;
+}
+
+html, body{
+  background-color: #191919;
+  color: #bbb;
+  font-size: 10vmin;
+  font-family: monospace;
+
+    overflow: hidden;
+}
+
+body{
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  margin: 0;
+  padding: 0;
+
+}
+
+.flex{
+  overflow-x: hidden;
+  overflow-y: hidden;
+  display:flex;
+  flex-wrap: nowrap;
+  margin: 0;
+  padding: 0;
+  align-content: space-between;
+  justify-content: space-between;
+  align-items: space-between;
+	height: 100%;
+}
+.row{ flex-direction: row;}
+.col{ flex-direction: column;}
+
+.mid{
+  overflow-x: hidden;
+  overflow-y: hidden;
+  display:flex;
+  flex-wrap: nowrap;
+  margin: auto;
+  padding: auto;
+  align-content: space-around;
+  justify-content: space-around;
+  align-items: space-around;
+  height: 100%;
+  width: 100vw;
+  vertical-align: middle;
+  text-align: center;
+  align-self: center;
+}
+
+.full{
+  background-color: #3b354e;
+  width: 90%;
+  height: 90%;
+  font-size: 1em;
+  margin: auto auto;
+  margin-top:auto;
+  margin-bottom: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.centerSVG{
+  margin: auto;
+  width: 100vmin;
+  height: 100vmin;
+  font-size: 10vmin;
+}
+
+.torusDiv{
+  position: static;
+}
+
+
+.gearWrapper{
+  perspective: 10em;
+  transform-style: preserve-3d;
+}
+
+.gearSystem{
+
+  transform-style: preserve-3d;
+
+}
+.gear{
+  overflow: visible;
+  font-size: 1em;
+  margin: auto;
+  position: relative;
+  transform-style: preserve-3d;
+  transform-origin: center center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events:none;
+  /*Animate the rotation*/
+  /*animation-name: rotate;
+  animation-duration: 16s;
+  animation-iteration-count: 1;
+  animation-timing-function: ease-in-out;
+  -webkit-animation-name: rotate;
+  -webkit-animation-duration: 8s;
+  -webkit-animation-iteration-count: 1;
+  -webkit-animation-timing-function: ease-in-out;*/
+/*
+  transition: transform 3s linear;
+  -webkit-transition: transform 3s linear;*/
+  /*//TODO: figure out a way to have ease ins and outs with gear teeth still meshing*/
+}
+
+.gearContainer{
+  transform-style: preserve-3d;
+  overflow: visible;
+  /*font-size: 10vw;*/
+  font-size: 1em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position:absolute;
+  pointer-events:none;
+}
+
+/* inner gyro: */
+.gyro{
+  font-size: 1em;
+  pointer-events:none;
+}
+
+
+.cellTransformcontainer{
+  pointer-events:none;
+}
+
+
+.majorRotator{
+
+}
+
+
+.majorTranslator{
+
+}
+
+
+.minorRotator{
+
+}
+
+
+.minorTranslator{
+
+}
+
+.cellPath{
+  transition: background-color 0.5s;
+  pointer-events:auto;
+}
+svg{
+  pointer-events:none;
+}
+
+.cellPath:hover{
+  background-color: red;
+}
+
+input{
+  pointer-events:auto;
+}
+
+</style>
+</head>
+<body>
+  <div id="main" class="" style="background-color:none;overflow:scroll;pointer-events:none;">
+    <p id="inputs" style="pointer-events:auto;font-size:12pt;margin: 1em 1em 1em 1em;">
+        <i>&#10087; Hexagonal Grid and Torus Generator &#9753;</i><br><br>
+        This will generate a hexagonal grid with many settings. If <i>torus</i> is true, the grid will be mapped to a torus in 3D, and can be rotated using the w, s, a, d, q, and e keys. Color fields accept most text formats of a color, as well as rgba().<br><br>
+  numHexagonsWide&nbsp;<input id="input_numHexagonsWide" placeholder="7" value="7" placeholder="7" /><br>
+  numHexagonsHigh&nbsp;<input id="input_numHexagonsHigh" placeholder="48" value="48" placeholder="48" /><br>
+  radiusMargin&nbsp;<input id="input_radiusMargin" placeholder="20" value="20" /><br>
+  nodeRange&nbsp;<input id="input_nodeRange" placeholder="0" value="0" /><br>
+  cellVertexRange&nbsp;<input id="input_cellVertexRange" placeholder="0" value="0" /><br>
+  handleRange&nbsp;<input id="input_handleRange" placeholder="0" value="0" /><br>
+  curveExtent&nbsp;<input id="input_curveExtent" placeholder="3" value="3" /><br>
+  strokeColor&nbsp;<input id="input_strokeColor" placeholder="black" value="black" /><br>
+  strokeWidth&nbsp;<input id="input_strokeWidth" placeholder="1" value="1" /><br>
+  fillColor&nbsp;</i><input id="input_fillColor" placeholder="cyan" value="cyan" /><br>
+  wrap&nbsp;<input id="input_wrap" placeholder="true" value="true" /><br>
+  scale&nbsp;<input id="input_scale" placeholder="0.9" value="0.9" /><br>
+  torus&nbsp;<input id="input_torus" placeholder="true" value="true" /><br>
+  <br><button style="pointer-events:auto;" onclick="enterGUI()">Generate</button><br><br>
+  <i>(Refresh page after generating to generate a new hexagonal grid.)</i>
+      </p>
+  </div>
+
+
+<script>
+
+function polToRect(magnitude, angle, asArray=true, noNeg=false){
+
+  //this function is meant for switching regular polar coordinates to
+  //rectangular coordinates for svg, with angles being clockwise from top
+  //option params: asArray returns x and y as a two element array,
+  //noNeg turns the magnitude to 0 if it was originally negative,
+  //step 1: add 90 in order to rotate so point faces up:
+  angle += (Math.PI/2);//Other point directions: angle += ((Math.PI)/(pointsArray[0].length))
+  //step 2: convert from polar to cartesian:
+  var mag = magnitude;
+  if (noNeg && (mag<0)){mag=0;}
+  var x = mag * Math.cos(angle);
+  var y = mag * Math.sin(angle);
+  //step 3: flip the sign of x and y coordinates to conform with svg structure and implement:
+  y *= (-1);
+  x *= (-1);
+  //step 4: output (if isArray param is true, makes array, otherwise formats for svg polygon):
+
+  if (asArray){
+    var rectOut = [x,y];
+    //rectOut.push(x,y);
+  }
+  else {
+    var rectOut = (" " + x + "," + y);
+  }
+  return rectOut;
+}
+
+function VAdd(a,b){
+  //vector addition
+  return a.map((e,i) => e + b[i]);
+}
+
+// flips y coordinates
+function Flipy(arr){
+  var newArr = [];
+  for (coords of arr){
+    newArr.push([coords[0],-coords[1]]);
+  }
+  return newArr;
+}
+
+function Normal(u=0, v=1){// u is mean, v is variance
+  var u=0,v=0
+  while(u === 0) u = Math.random();
+  while(v === 0) v = Math.random();
+
+  return Math.sqrt( -2.0 * Math.log(u)) * Math.cos( 2.0 * Math.PI * v);
+}
+
+// Apply central limit theorem random numbers to an array of coordinates:
+// stop is abs value of cutoff of random range,
+// reps is how many samples
+function CLT(arr,stop,reps){
+
+  var newArr = [];
+
+  // random number of max abs value maxi out from 0:
+  function Rando(maxi,reps){
+    const top = maxi*2;
+    var sum = 0;
+    for(i=0;i<reps;i++){
+      sum += Math.random()*top;
+    }
+    return (sum/reps)-maxi;
+  }
+
+  for (coords of arr){
+    newArr.push([
+      coords[0]+Rando(maxi=stop,reps=reps),
+      coords[1]+Rando(maxi=stop,reps=reps)
+    ]);
+  }
+  return newArr;
+}
+
+// SINGLE ARRAY version:
+// Apply central limit theorem random numbers to an array of coordinates:
+// stop is abs value of cutoff of random range,
+// reps is how many samples
+function CLTs(coords,stop,reps){
+
+  var newArr = [];
+
+  // random number of max abs value maxi out from 0:
+  function Rando(maxi,reps){
+    const top = maxi*2;
+    var sum = 0;
+    for(i=0;i<reps;i++){
+      sum += Math.random()*top;
+    }
+    return (sum/reps)-maxi;
+  }
+
+  return [
+    coords[0]+Rando(maxi=stop,reps=reps),
+    coords[1]+Rando(maxi=stop,reps=reps)
+  ];
+}
+
+
+// convert coordinates to a string, to act as a "link":
+function nodeString(coords){
+  const precision = 1000;
+  return ''+String(Math.round(coords[0]*precision)/precision)+'_'+
+    String(Math.round(coords[1]*precision)/precision)+'';
+}
+
+//-----------
+
+
+
+function CreateHexGrid(numHexagonsWide,numHexagonsHigh,radiusMargin,nodeRange,
+  cellVertexRange,handleRange,curveExtent,strokeColor,strokeWidth,fillColor,
+  wrap,scale,torus){
+  console.log(arguments);
+  // will return grid and the html.
+  // needs a wrapper function to inject into the page
+  scale = scale*100;
+  var scaleMargin = (100-scale)/2;
+  // var svg = '<svg  id="HexGrid" class="centerSVG" viewbox="-50 -50 100 100"'+
+  // ' style="width:'+scale+'%;height:'+scale+'%;background: none;overflow: visible;padding:0;margin-left:'+
+  // scaleMargin+'%;margin-top:'+scaleMargin+'%">';
+
+//transform:rotateY(3600deg);
+  // 100/(radius*1.5) = cols
+
+  // set up some constants:
+
+  const maxRadius = 100/(1.5*numHexagonsWide);
+  const maxApothem = maxRadius * (Math.sqrt(3)/2);
+  // const numHexagonsHigh = 100/(maxApothem*2);
+  // mean radius with margin taken into account; mainly just for svg:
+  const meanRadius = ((100-radiusMargin)/100)*maxRadius;
+  const absoluteRadiusMargin = maxRadius - meanRadius;
+
+  // more constants, for different conditions/dimensions of cell types:
+
+  const even = !(numHexagonsWide%2);
+
+  //
+  // Generate the model of the hexagons first:
+  //
+
+  var hexGridModel = []; // main array / grid.
+  // stop or max extent of random variation of nodes' x and y coordinates:
+  const verticesStopNode = (nodeRange/100)*maxRadius;
+  // stop or max extent of random variation of cells' vertices' coords AFTER margin:
+  const verticesStopCell = (cellVertexRange/100)*maxRadius;
+  // number of repetitions of values going into the averaged result for randomization (C.L.T.-style),
+  // higher number, less variation between points:
+  const cltreps = 3;
+
+  // establish some constants:
+  const cols = numHexagonsWide;
+  const rows = Math.ceil(numHexagonsHigh);
+
+  // The node dictionary:
+  var nodes = {};
+
+  function makeNode(c,r,v,currentNode){
+    // create the node:
+    nodes[currentNode] = {
+      adjacentCells: [
+        [c,r,v]
+      ],
+      rawCoordinates: hexGridModel[c][r].raw.cellVertices[v],
+      // get relative displacement so future modifications are easier:
+      relativeDisplacement: CLTs(coords=[0,0],
+        stop=verticesStopNode,
+        reps=cltreps)
+    }
+    // calculate the absolute, modified/randomized coords of this node:
+    nodes[currentNode].modifiedCoordinates = [hexGridModel[c][r].raw.cellVertices[v][0]+nodes[currentNode].relativeDisplacement[0],
+      hexGridModel[c][r].raw.cellVertices[v][1]+nodes[currentNode].relativeDisplacement[1]];
+
+    // now save the node's modified coords to the hex cell grid:
+    hexGridModel[c][r].mod.cellVertices[v] = nodes[currentNode].modifiedCoordinates;
+
+  }
+
+  function rewriteNode(targetNode,copiedNode){
+    // copy the copiedNode's relative displacements:
+    nodes[targetNode].relativeDisplacement = nodes[copiedNode].relativeDisplacement;
+    // now overwite the target node with the new modified coordinates:
+    nodes[targetNode].modifiedCoordinates[0] = nodes[targetNode].relativeDisplacement[0]+nodes[targetNode].rawCoordinates[0];
+    nodes[targetNode].modifiedCoordinates[1] = nodes[targetNode].relativeDisplacement[1]+nodes[targetNode].rawCoordinates[1];
+    // propogate this change out to the actual adjacent cells:
+    for (adj of nodes[targetNode].adjacentCells){
+      // console.log('rewriting node/cell vertex from: '+copiedNode+' to '+targetNode+'; '+
+      //   adj[0]+', '+adj[1]+', '+adj[2])
+      hexGridModel[adj[0]][adj[1]].mod.cellVertices[adj[2]] = nodes[targetNode].modifiedCoordinates;
+    }
+  }
+
+  var bounds = {
+    minX : 0,
+    minY : 0,
+    maxX : 0,
+    maxY : 0
+  }
+
+  // RAW and MOD loop
+
+  //columns:
+  for (c=0;c<(numHexagonsWide+1);c++){
+
+    // add a new array, representing a new column, to the hexGridModel:
+    hexGridModel.push([]);
+
+    // rows:
+    for (r=0;r<(numHexagonsHigh+1);r++){
+
+      //
+      // RAW/ unmodded:
+      //
+      // add a new object representing this cell:
+      hexGridModel[c].push({
+        raw:{
+          cellX : (c*(maxRadius*1.5))-50,
+          cellY : ((2*maxApothem*r)-(maxApothem*(c%2)))-50
+        }
+      });
+
+      // get some relevant values for use later (mainly torus/other geometries):
+      if ((r==0) && (c==0)){  // top left cell
+        // bounds.minX = hexGridModel[c][r].raw.cellX - (maxRadius);
+        bounds.minX = hexGridModel[c][r].raw.cellX;
+        bounds.minY = hexGridModel[c][r].raw.cellY - maxApothem;
+      }
+      if ((r>=numHexagonsHigh) && (c==numHexagonsWide)){  // bottom right cell
+        bounds.maxX = hexGridModel[c][r].raw.cellX + maxRadius + (maxRadius/2);
+        // depending on even/odd, last column's maxY will be different
+        if ((numHexagonsWide%2)){
+          bounds.maxY = hexGridModel[c][r].raw.cellY + (2*maxApothem);
+        }
+        else{
+          bounds.maxY = hexGridModel[c][r].raw.cellY + maxApothem;
+        }
+      }
+
+
+
+      // generate the raw vertices; before modification:
+      hexGridModel[c][r].raw.cellVertices = CreateHexagon(x=hexGridModel[c][r].raw.cellX,
+        y=hexGridModel[c][r].raw.cellY,
+        radius=maxRadius);
+
+      // generate "blank" vertices that will represent the modified vertex, before margin:
+      hexGridModel[c][r].mod = {
+        cellVertices:[
+          [undefined,undefined],[undefined,undefined],
+          [undefined,undefined],[undefined,undefined],
+          [undefined,undefined],[undefined,undefined]
+        ]
+      };
+
+      // MOD / with added randomization:
+      for (v=0;v<6;v++){
+        // create the string representign the node of this current vertex:
+        var currentNode = nodeString(hexGridModel[c][r].raw.cellVertices[v]);
+        // check the nodes dicitonary for existence of this node:
+        if (nodes[currentNode] == undefined){
+          // create the node:
+          // cell, row, vertex, currentNode;
+          // this should operate on global nodes and hegridModel objects:
+          makeNode(c,r,v,currentNode);
+        }
+        else{
+          // get the preexisting coordinates from the node dictionary:
+          hexGridModel[c][r].mod.cellVertices[v] = nodes[currentNode].modifiedCoordinates;
+          // and note the link back to this cell:
+          nodes[currentNode].adjacentCells.push([c,r,v]);
+        }
+
+
+      }
+    }
+  } // end so that wrap stuff can be done, if necessary
+
+
+  //
+  // TORUS PREP
+  //
+  // add 50 back to the bounds, for use in torus mode:
+  var boundsTorus = {};
+  for (var bound in bounds){
+    boundsTorus[bound] = bounds[bound]+50;
+  }
+  // get "ranges" to save some calulation time later:
+  var rangeY = (bounds.maxY-bounds.minY);
+  var rangeX = (bounds.maxX-bounds.minX);
+  // determine radius sizes:
+  var majRadius = rangeY/(2*Math.PI);
+  var minRadius = rangeX/(2*Math.PI);
+
+  console.log(' rangeY:'+rangeY+' rangeX:'+rangeX);
+
+  console.log(' majRadius:'+majRadius+' minRadius:'+minRadius);
+  console.log('Bounds:');
+  console.log(bounds);
+
+  lastRow = hexGridModel[0].length - 1;
+  lastCol = hexGridModel.length - 1;
+  console.log('Last Row: '+lastRow+'; Last Col: '+lastCol);
+
+// - - - - -
+
+  // now establish svg:
+  var svg = '';
+  if (wrap&&torus){
+    // var torusGyroStyle = 'style="padding:0;transition: transform 0.033333s linear;-webkit-transition: transform 0.033333s linear;"';
+    var torusGyroStyle = 'style="padding:0;"';
+
+    svg+='<div id="torusWrapper" class="gear" style="width:100%;height:100%;font-size:'+
+    // ((scale/100)*(Math.PI*(majRadius+minRadius))/(Math.PI*rangeX))+'em;">'+
+    ((0.5*scale)/(majRadius+minRadius))+'em;">'+
+    '<div id="torus_z" class="gearContainer gyro" '+torusGyroStyle+'>'+
+    '<div id="torus_y" class="gearContainer gyro" '+torusGyroStyle+'>'+
+    '<div id="torus_x" class="gearContainer gyro" '+torusGyroStyle+'>'+
+    '';
+  }
+  else{
+    var svg = '<svg  id="HexGrid" class="centerSVG" viewbox="-50 -50 100 100"'+
+    ' style="width:'+scale+'%;height:'+scale+'%;background: none;overflow: visible;padding:0;margin-left:'+
+    scaleMargin+'%;margin-top:'+scaleMargin+'%;pointer-events:none;">';
+  }
+
+// - - - - - --- - - -
+  // WRAP:
+  //TODO
+  if (wrap){
+
+    //
+    // REWRITE BOTTOM ROW
+    //
+    for (c=0;c<(numHexagonsWide+1);c++){
+      // Southwest/vertex 2:
+      var currentNode = nodeString(hexGridModel[c][lastRow].raw.cellVertices[2]);
+      var copyingNode = nodeString(hexGridModel[c][0].raw.cellVertices[4]);
+      rewriteNode(currentNode,copyingNode);
+      // Southeast/vertex 1:
+      currentNode = nodeString(hexGridModel[c][lastRow].raw.cellVertices[1]);
+      copyingNode = nodeString(hexGridModel[c][0].raw.cellVertices[5]);
+      rewriteNode(currentNode,copyingNode);
+    }
+
+    //
+    // REWRITE RIGHT SIDE (if even num. cols)
+    //
+    if ((numHexagonsWide%2)){//seems opposite, but actual num columns is 1+ user input so provide margin
+      // main algortihm for the right side
+      for (r=0;r<(numHexagonsHigh+1);r++){
+        // East/vertex 0:
+        currentNode = nodeString(hexGridModel[lastCol][r].raw.cellVertices[0]);
+        copyingNode = nodeString(hexGridModel[0][r].raw.cellVertices[4]);
+        rewriteNode(currentNode,copyingNode);
+        // Southeast/vertex 5:
+        currentNode = nodeString(hexGridModel[lastCol][r].raw.cellVertices[1]);
+        copyingNode = nodeString(hexGridModel[0][r].raw.cellVertices[3]);
+        rewriteNode(currentNode,copyingNode);
+      } // end new right column
+      // fix the northeast vertex of topright cell:
+      currentNode = nodeString(hexGridModel[lastCol][0].raw.cellVertices[5]);
+      copyingNode = nodeString(hexGridModel[lastCol][lastRow].raw.cellVertices[1]);
+      rewriteNode(currentNode,copyingNode);
+    }
+  } // end wrap
+
+
+  //
+  // MAR: subtract the margin from vertices:
+  //
+  //columns:
+  for (c=0;c<(hexGridModel.length);c++){
+
+    // rows:
+    for (r=0;r<(hexGridModel[c].length);r++){
+      // generate "blank" vertices that will represent the modified vertex, after margin:
+      hexGridModel[c][r].mar = {
+        cellVertices:[
+          [undefined,undefined],[undefined,undefined],
+          [undefined,undefined],[undefined,undefined],
+          [undefined,undefined],[undefined,undefined]
+        ]
+      };
+      // generate a minihexagon whose vertices' distances represent the margin:
+      // miniMarginHexagon = CreateHexagon(x=hexGridModel[c][r].raw.cellX,
+      //   y=hexGridModel[c][r].raw.cellY,
+      //   radius=absoluteRadiusMargin);
+      miniMarginHexagon = CreateHexagon(x=0,
+        y=0,
+        radius=absoluteRadiusMargin);
+      // console.log('mini margin hexagon');
+      // console.log(miniMarginHexagon);
+      // then subtract this minihexagon from the main:
+      for (v=0;v<6;v++){
+        // console.log('MAR: '+c+', '+r+', '+v)
+        hexGridModel[c][r].mar.cellVertices[v][0] = hexGridModel[c][r].mod.cellVertices[v][0]-miniMarginHexagon[v][0];
+        hexGridModel[c][r].mar.cellVertices[v][1] = hexGridModel[c][r].mod.cellVertices[v][1]-miniMarginHexagon[v][1];
+      }
+    }
+  }
+
+
+  // loop again and actually create the SVG from the previously-generated model:
+
+  //columns:
+  for (c=0;c<(numHexagonsWide+1);c++){
+
+    // rows:
+    for (r=0;r<(numHexagonsHigh+1);r++){
+      // console.log('svg cell: Col: '+c+', Row: '+r);
+      if (wrap&&torus){
+        svg += CreateHexagonPathTorus(hexagonVertices=hexGridModel[c][r].mar.cellVertices,
+        // x=(c*(maxRadius*1.5))-50,
+        //   y=((2*maxApothem*r)-(maxApothem*(c%2)))-50,
+        //   radius=meanRadius,
+          id='c'+c+'r'+r+'',
+          handleExtent=(curveExtent/100)*maxRadius,
+          // note: verticesStop is additional variation that is not really necessary,
+          // but might look more interesting:
+          verticesStop=verticesStopCell,
+          handlesStop=(handleRange/100)*maxRadius,
+          strokeColorA=strokeColor,
+          strokeWidth=strokeWidth,
+          fillColor=fillColor,
+          majorRadius=majRadius,
+          minorRadius=minRadius,
+          majorAngle=(hexGridModel[c][r].raw.cellY - bounds.minY)/rangeY,
+          minorAngle=(hexGridModel[c][r].raw.cellX - bounds.minX)/rangeX,
+          centerX = hexGridModel[c][r].raw.cellX,
+          centerY = hexGridModel[c][r].raw.cellY,
+          xRange=rangeX,
+          yRange=rangeY
+        );
+      }
+      else{
+
+        svg += CreateHexagonPath(hexagonVertices=hexGridModel[c][r].mar.cellVertices,
+        // x=(c*(maxRadius*1.5))-50,
+        //   y=((2*maxApothem*r)-(maxApothem*(c%2)))-50,
+        //   radius=meanRadius,
+          id='c'+c+'r'+r+'',
+          handleExtent=(curveExtent/100)*maxRadius,
+          // note: verticesStop is additional variation that is not really necessary,
+          // but might look more interesting:
+          verticesStop=verticesStopCell,
+          handlesStop=(handleRange/100)*maxRadius,
+          strokeColorA=strokeColor,
+          strokeWidth=strokeWidth,
+          fillColor=fillColor);
+
+      }
+    }
+
+  }
+
+  // for torus:
+  if (wrap&&torus){
+    svg += '</div></div></div></div>';
+  }
+  else{
+    svg += '</svg>';
+  }
+
+  return [svg, hexGridModel, nodes];
+}
+
+function CreateHexagonPath(hexagonVertices,id,handleExtent,verticesStop,handlesStop,strokeColorA,strokeWidth,fillColor){
+
+  // open the path:
+  var path = '<path id="'+id+'" width="100" height="100" '+
+    'style="pointer-events:auto;" onclick="console.log(7);" d="';
+
+  // create handles:
+  const hexagonHandles = CreateHexagonHandles(arr=hexagonVertices,ext=handleExtent);
+  // perform randomization:
+  var hexagonVerticesR = CLT(arr=hexagonVertices,stop=verticesStop,reps=3);
+  var hexagonHandlesR = CLT(arr=hexagonHandles,stop=handlesStop,reps=3);
+  // correct for the last handle's randomization:
+  // need to make it opposite of the first, so that point is smooth:
+  hexagonHandlesR[6] = [
+    hexagonVerticesR[0][0]-(hexagonHandlesR[0][0]-hexagonVerticesR[0][0]),
+    hexagonVerticesR[0][1]-(hexagonHandlesR[0][1]-hexagonVerticesR[0][1])
+  ];
+
+  // format the points for svg, add to path:
+  path += 'M '+hexagonVerticesR[0].join(' ')+
+    ' C '+hexagonHandlesR[0].join(' ')+', '+hexagonHandlesR[1].join(' ')+
+    ', '+hexagonVerticesR[1].join(' ')+
+    'S '+hexagonHandlesR[2].join(' ')+', '+hexagonVerticesR[2].join(' ')+
+    'S '+hexagonHandlesR[3].join(' ')+', '+hexagonVerticesR[3].join(' ')+
+    'S '+hexagonHandlesR[4].join(' ')+', '+hexagonVerticesR[4].join(' ')+
+    'S '+hexagonHandlesR[5].join(' ')+', '+hexagonVerticesR[5].join(' ')+
+    'S '+hexagonHandlesR[6].join(' ')+', '+hexagonVerticesR[0].join(' ')+
+    'Z"';
+  // close path:
+  // path += ' stroke="#c8a640" stroke-width="0" fill="#362266"/>';
+  path += ' stroke="'+strokeColorA+'" stroke-width="'+
+    strokeWidth+'" fill="'+fillColor+'"/>';
+  //return the path:
+  return path;
+}
+
+function CreateHexagonPathTorus(hexagonVertices,id,handleExtent,verticesStop,
+  handlesStop,strokeColorA,strokeWidth,fillColor,
+  majorRadius,
+  minorRadius,
+  majorAngle,
+  minorAngle,
+  centerX,
+  centerY,
+  xRange,
+  yRange){
+
+  // scale the y coordinates of this cell depending on where it is
+  // along the minor ring/X-coordinate of the torus:
+  // (should make torus look smoother):
+  //NOTE: uses cell's center as scale, not necessarily differentiates between left and right sides like it really should...
+  // var scaleFactor = (majorRadius + (minorRadius*Math.cos(2*Math.PI*minorAngle)))/majorRadius;
+
+  // reset the vertices so they are centered at 0:
+  var centeredVertices = [];
+  for (vert of hexagonVertices){
+    if (id=='c0r0'){
+      // console.log(vert);
+    }
+
+    // perform the centering and scaling:
+    centeredVertices.push([vert[0]-centerX, //x coord
+      // scaleFactor*(1+((vert[0]-centerX)/(minorRadius*Math.PI*2)))*(vert[1]-centerY)]); //y coord
+        (majorRadius + (minorRadius*Math.cos(2*Math.PI*(((vert[0]-centerX)/xRange)+minorAngle))))/majorRadius*(vert[1]-centerY)]);
+    if (id=='c0r0'){
+      // console.log(centeredVertices);
+    }
+  }
+  if (id=='c0r0'){
+    // console.log('before: ');
+    // console.log(hexagonVertices);
+  }
+  hexagonVertices = centeredVertices; //HACK
+  if (id=='c0r0'){
+    // console.log('after: ');
+    // console.log(hexagonVertices);
+  }
+
+  // open the path:
+  var path = ''
+  // path += '<svg  id="HexGrid" class="centerSVG" viewbox="-50 -50 100 100"'+
+  //   ' style="width:100%;height:100%;background: none;overflow: visible;padding:0;">';
+
+  // radii are usually in vmin units
+  path += '<div class="gearContainer cellTransformContainer majorRotator " id="'+
+    id+'_majorRotator" style="transform:rotateX('+(majorAngle*360)+'deg);" >';
+  path += '<div class="gear cellTransformContainer majorTranslator" id="'+
+    id+'_majorTranslator" style="transform:translateZ('+(majorRadius*1)/10+'em);" >';
+  path += '<div class="gear cellTransformContainer minorRotator" id="'+
+    id+'_minorRotator" style="transform:rotateY('+(minorAngle*360)+'deg);" >';
+  path += '<div class="gear cellTransformContainer minorTranslator" id="'+
+    id+'_minorTranslator" style="transform:translateZ('+(minorRadius*1)/10+'em);" >';
+  path += '<svg id="HexGrid" class="gear" viewbox="-50 -50 100 100"'+
+    ' style="width:10em;height:10em;background: none;overflow: visible;padding:0;'+
+    'pointer-events:none;" onclick="console.log(\''+id+'_svg\');">';
+  path += ''+
+    // '<g id="g_'+id+'" style="pointer-events:visible;" onclick="console.log(\''+id+'\');">'+
+    '<path id="'+id+'" class="cellPath" style="" '+
+    'onclick="console.log(\''+id+'\');" width="100" height="100" d="';
+
+  // create handles:
+  const hexagonHandles = CreateHexagonHandles(arr=hexagonVertices,ext=handleExtent);
+  // perform randomization:
+  var hexagonVerticesR = CLT(arr=hexagonVertices,stop=verticesStop,reps=3);
+  var hexagonHandlesR = CLT(arr=hexagonHandles,stop=handlesStop,reps=3);
+  // correct for the last handle's randomization:
+  // need to make it opposite of the first, so that point is smooth:
+  hexagonHandlesR[6] = [
+    hexagonVerticesR[0][0]-(hexagonHandlesR[0][0]-hexagonVerticesR[0][0]),
+    hexagonVerticesR[0][1]-(hexagonHandlesR[0][1]-hexagonVerticesR[0][1])
+  ];
+
+  // format the points for svg, add to path:
+  path += 'M '+hexagonVerticesR[0].join(' ')+
+    ' C '+hexagonHandlesR[0].join(' ')+', '+hexagonHandlesR[1].join(' ')+
+    ', '+hexagonVerticesR[1].join(' ')+
+    'S '+hexagonHandlesR[2].join(' ')+', '+hexagonVerticesR[2].join(' ')+
+    'S '+hexagonHandlesR[3].join(' ')+', '+hexagonVerticesR[3].join(' ')+
+    'S '+hexagonHandlesR[4].join(' ')+', '+hexagonVerticesR[4].join(' ')+
+    'S '+hexagonHandlesR[5].join(' ')+', '+hexagonVerticesR[5].join(' ')+
+    'S '+hexagonHandlesR[6].join(' ')+', '+hexagonVerticesR[0].join(' ')+
+    'Z"';
+  // close path:
+  // path += ' stroke="#c8a640" stroke-width="0" fill="#362266"/>';
+  path += ' stroke="'+strokeColorA+'" stroke-width="'+
+    strokeWidth+'" fill="'+fillColor+'"/>'+
+    // '</g>'+
+    '';
+  // path += '</g></g></g></g>';
+  path  += '</svg>';
+  path += '</div></div></div></div>';
+
+  //return the path:
+  return path;
+}
+
+function CreateHexagon(x,y,radius){
+  var apothem = radius*Math.sqrt(3)/2;
+  return [
+    [x+radius,y+0],
+    [x+(radius/2),y+apothem],
+    [x-(radius/2),y+apothem],
+    [x-radius,y+0],
+    [x-(radius/2),y-apothem],
+    [x+(radius/2),y-apothem]];
+}
+
+// create handle points for a bezier+smooths path for hexagon.
+// note that there will be one more point than there are vertices
+// arr is input 6-coord array, ext is extent of the handles
+function CreateHexagonHandles(arr,ext){
+  const s3 = Math.sqrt(3);
+  const es3 = s3*ext;
+
+  return [
+    [arr[0][0],arr[0][1]+es3],
+    [arr[1][0]+es3,arr[1][1]-ext],
+    [arr[2][0]+es3,arr[2][1]+ext],
+    [arr[3][0],arr[3][1]+es3],
+    [arr[4][0]-es3,arr[4][1]+ext],
+    [arr[5][0]-es3,arr[5][1]-ext],
+    [arr[0][0],arr[0][1]-es3]
+  ];
+}
+
+
+// svg version, y-axis flipped:
+function CreateHexagonSVG(x,y,radius){
+  var apothem = radius*Math.sqrt(3)/2;
+  return [
+    [x+radius,y],
+    [x+(radius/2),y-apothem],
+    [x-(radius/2),y-apothem],
+    [x-radius,y],
+    [x-(radius/2),y+apothem],
+    [x+(radius/2),y+apothem]];
+}
+
+// -------------------------------
+// var hexG = CreateHexGrid(
+//   numHexagonsWide=7,
+//   numHexagonsHigh=48,
+//   radiusMargin=20,
+//   nodeRange=0,
+//   cellVertexRange=0,
+//   handleRange=0,
+//   curveExtent=3,
+//   strokeColor='black',//'rgba(0,0,0,0.5)',
+//   strokeWidth=1.0,
+//   fillColor='white',//'rgba(100,25,200,0.00895)',
+//   wrap=true,
+//   scale=0.9,
+//   torus=true );
+// document.getElementById('main').innerHTML = hexG[0];
+// hexes = hexG[1];
+// nodes = hexG[2];
+
+function enterGUI(){
+  document.getElementById("main").className = "centerSVG";
+  var settings = [
+'numHexagonsWide',
+'numHexagonsHigh',
+'radiusMargin',
+'nodeRange',
+'cellVertexRange',
+'handleRange',
+'curveExtent',
+'strokeColor',
+'strokeWidth',
+'fillColor',
+'wrap',
+'scale',
+    'torus'];
+  var inputsUI = {};
+
+  console.log(inputs);
+  for (setting of settings){
+    var key = 'input_'+setting;
+    console.log(key);
+    inputsUI[setting] = document.getElementById(key).value;
+  }
+  console.log(inputs);
+  var hexGresult = CreateHexGrid(
+    numHexagonsWide=1.0*inputsUI['numHexagonsWide'],
+    numHexagonsHigh=1.0*inputsUI['numHexagonsHigh'],
+    radiusMargin=1.0*inputsUI['radiusMargin'],
+    nodeRange=1.0*inputsUI['nodeRange'],
+    cellVertexRange=1.0*inputsUI['cellVertexRange'],
+    handleRange=1.0*inputsUI['handleRange'],
+    curveExtent=1.0*inputsUI['curveExtent'],
+    strokeColor=inputsUI['strokeColor'],//'rgba(0,0,0,0.5)',
+    strokeWidth=1.0*inputsUI['strokeWidth'],
+    fillColor=inputsUI['fillColor'],//'rgba(100,25,200,0.00895)',
+    wrap=(inputsUI['wrap']=='true')?true:false,
+    scale=1.0*inputsUI['scale'],
+    torus=(inputsUI['torus']=='true')?true:false);
+  document.getElementById('main').innerHTML = hexGresult[0];
+  hexes = hexGresult[1];
+  nodes = hexGresult[2];
+  document.getElementById('main').style.overflow='visible';
+
+  setTimeout(startRotation, 500);
+  // startRotation();
+}
+
+// run in torus mode:
+//document.getElementById('torus').style.transform='rotateY(2400deg)';
+
+// Some examples:
+
+// a pretty "normal" looking one, for reference:
+//
+// document.getElementById('main').innerHTML = CreateHexGrid(
+//   numHexagonsWide=8,
+//   radiusMargin=15,
+//   nodeRange=5,
+//   cellVertexRange=0,
+//   handleRange=4,
+//   curveExtent=7,
+//   strokeColor='#c8a640',
+//   strokeWidth=0,
+//   fillColor='#362266',
+//   wrap=true);
+
+
+//another pretty normal one:
+
+//
+// document.getElementById('main').innerHTML = CreateHexGrid(
+//   numHexagonsWide=8,
+//   radiusMargin=0,
+//   nodeRange=51,
+//   cellVertexRange=0,
+//   handleRange=4,
+//   curveExtent=0,
+//   strokeColor='#c8a640',
+//   strokeWidth=1,
+//   fillColor='none',
+//   wrap=true);
+
+
+/////////////////////////
+
+//  keyboard controls
+
+/////////////////////////
+
+var k = {};
+
+var rotations = { // rotation angles, and whether keys are being pressed
+  z:Math.random()*360,
+  x:Math.random()*360, // initial random position just to make it interesting
+  y:Math.random()*360,
+  zp:false,
+  zn:false,
+  xp:false,
+  xn:false,
+  yp:false,
+  yn:false
+};
+
+function rotateTorus(/*axis,amount,time*/){
+
+  var degrees = 0.5;
+  var axis;
+  direcs = {zp:1, zn:-1, xp:1, xn:-1, yp:1, yn:-1};
+    for (direc in direcs){
+      if (rotations[direc] == true){
+        rotations[direc[0]] += (direcs[direc]*degrees);
+      }
+    }
+  var torusX = document.getElementById('torus_x');
+  var torusY = document.getElementById('torus_y');
+  var torusZ = document.getElementById('torus_z');
+  torusX.style.transform = 'rotateX('+rotations.x+'deg)';
+  torusY.style.transform = 'rotateY('+rotations.y+'deg)';
+  torusZ.style.transform = 'rotateZ('+rotations.z+'deg)';
+
+
+}
+
+// rotationCount = 100;
+
+
+function startRotation(){
+  setInterval(rotateTorus, 1000/120);
+}
+
+function endRotation(){
+
+}
+
+var dirs = {xp: 'w', xp2: 'W', xn: 's', xn2: 'S',
+  yp: 'd', yp2: 'D', yn: 'a', yn2: 'A',
+  zp: 'e', zp2: 'E', zn: 'q', zn2: 'Q',
+  up: 'ArrowUp', right: 'ArrowRight', down: 'ArrowDown', left: 'ArrowLeft'
+};
+
+document.onkeydown = function(e) {
+  if (document.getElementById('inputs') == null){
+    var key = e.key;// ? e.key : e.which;
+    // console.log('key: '+key)
+
+    // var torus = document.getElementById('torus');
+    var degrees = 0;
+    var axis;
+    switch(key){
+      // d (68) or right (39):
+      case dirs.zp: case dirs.zp2:
+        rotations["zp"] = true;
+        break;
+      // a (65) or left (37):
+      case dirs.zn: case dirs.zn2:
+        rotations["zn"] = true;
+        break;
+      // w (87) or up (38):
+      case dirs.xp: case dirs.xp2: case dirs.up:
+        rotations["xp"] = true;
+        break;
+      // s (83) or down (40):
+      case dirs.xn: case dirs.xn2: case dirs.down:
+        rotations["xn"] = true;
+        break;
+      // q:
+      case dirs.yn: case dirs.yn2: case dirs.left:
+        rotations["yn"] = true;
+        break;
+      // e:
+      case dirs.yp: case dirs.yp2: case dirs.right:
+        rotations["yp"] = true;
+        break;
+    }
+    // console.log('pressed'+key);
+
+  }
+}
+
+document.onkeyup = function(e) {
+  if (document.getElementById('inputs') == null){
+    var key = e.key;// ? e.key : e.which;
+    // console.log('key: '+key)
+
+    // var torus = document.getElementById('torus');
+    var degrees = 0;
+    var axis;
+    switch(key){
+      // d (68) or right (39):
+      case dirs.zp: case dirs.zp2:
+        rotations["zp"] = false;
+        break;
+      // a (65) or left (37):
+      case dirs.zn: case dirs.zn2:
+        rotations["zn"] = false;
+        break;
+      // w (87) or up (38):
+      case dirs.xp: case dirs.xp2: case dirs.up:
+        rotations["xp"] = false;
+        break;
+      // s (83) or down (40):
+      case dirs.xn: case dirs.xn2: case dirs.down:
+        rotations["xn"] = false;
+        break;
+      // q:
+      case dirs.yn: case dirs.yn2: case dirs.left:
+        rotations["yn"] = false;
+        break;
+      // e:
+      case dirs.yp: case dirs.yp2: case dirs.right:
+        rotations["yp"] = false;
+        break;
+    }
+
+    // rotateTorus();
+  }
+}
+
+</script>
+</body>
+
+</html>
