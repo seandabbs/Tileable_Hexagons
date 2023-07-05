@@ -24,7 +24,7 @@ html, body{
 }
 
 body{
-  display: flex;
+  display: block; /*flex*/
   height: 100%;
   width: 100%;
   position: absolute;
@@ -111,6 +111,7 @@ body{
   justify-content: center;
   align-items: center;
   pointer-events:none;
+  /* perspective: 50em; */
   /*Animate the rotation*/
   /*animation-name: rotate;
   animation-duration: 16s;
@@ -191,7 +192,7 @@ input{
   <div id="main" class="" style="background-color:none;overflow:scroll;pointer-events:none;">
     <p id="inputs" style="pointer-events:auto;font-size:12pt;margin: 1em 1em 1em 1em;">
         <i>&#10087; Hexagonal Grid and Torus Generator &#9753;</i><br><br>
-        This will generate a hexagonal grid with many settings. If <i>torus</i> is true, the grid will be mapped to a torus in 3D, and can be rotated using the w, s, a, d, q, and e keys. Color fields accept most text formats of a color, as well as rgba().<br><br>
+        This will generate a hexagonal grid with many settings. If <i>torus</i> is true, the grid will be mapped to a torus in 3D, and can be rotated using the WASDEQ keys or the mouse/touchscreen. Color fields accept most text formats of a color, as well as rgba().<br><br>
   numHexagonsWide&nbsp;<input id="input_numHexagonsWide" placeholder="7" value="7" placeholder="7" /><br>
   numHexagonsHigh&nbsp;<input id="input_numHexagonsHigh" placeholder="48" value="48" placeholder="48" /><br>
   radiusMargin&nbsp;<input id="input_radiusMargin" placeholder="20" value="20" /><br>
@@ -925,6 +926,9 @@ function enterGUI(){
 
   setTimeout(startRotation, 500);
   // startRotation();
+
+  init3d();
+
 }
 
 // run in torus mode:
@@ -971,10 +975,24 @@ function enterGUI(){
 
 var k = {};
 
+// random version:
+// var rotations = { // rotation angles, and whether keys are being pressed
+//   z:Math.random()*360,
+//   x:Math.random()*360, // initial random position just to make it interesting
+//   y:Math.random()*360,
+//   zp:false,
+//   zn:false,
+//   xp:false,
+//   xn:false,
+//   yp:false,
+//   yn:false
+// };
+
+// zero-rotation version:
 var rotations = { // rotation angles, and whether keys are being pressed
-  z:Math.random()*360,
-  x:Math.random()*360, // initial random position just to make it interesting
-  y:Math.random()*360,
+  z:0,
+  x:0, // initial random position just to make it interesting
+  y:0,
   zp:false,
   zn:false,
   xp:false,
@@ -982,6 +1000,7 @@ var rotations = { // rotation angles, and whether keys are being pressed
   yp:false,
   yn:false
 };
+
 
 function rotateTorus(/*axis,amount,time*/){
 
@@ -1019,6 +1038,14 @@ var dirs = {xp: 'w', xp2: 'W', xn: 's', xn2: 'S',
   zp: 'e', zp2: 'E', zn: 'q', zn2: 'Q',
   up: 'ArrowUp', right: 'ArrowRight', down: 'ArrowDown', left: 'ArrowLeft'
 };
+
+
+
+
+
+
+
+
 
 document.onkeydown = function(e) {
   if (document.getElementById('inputs') == null){
@@ -1097,6 +1124,54 @@ document.onkeyup = function(e) {
     // rotateTorus();
   }
 }
+
+
+// pointer (mouse and/or touchscreen, etc) events handlers
+
+var dragStatus = false;
+var dragInitialRotations = {
+  x:rotations.x,
+  y:rotations.y,
+  z:rotations.z,
+};
+var dragStart = {};
+
+function torusClicked(event){
+  dragStatus = true;
+  dragInitialRotations = {
+    x: rotations.x,
+    y: rotations.y,
+    z: rotations.z
+  };
+  dragStart = {
+    x: event.pageX,
+    y: event.pageY
+  };
+  console.log("onpointerdown...");
+}
+
+function torusDragged(event){
+  if (dragStatus == true){
+    rotations.y = dragInitialRotations.y + (180*(event.pageX - dragStart.x) / window.innerWidth);
+    rotations.x = dragInitialRotations.x - (180*(event.pageY - dragStart.y) / window.innerHeight);
+
+    rotateTorus();
+  }
+}
+
+function torusLetGo(event){
+  dragStatus = false;
+
+  console.log("onpointerup...");
+}
+
+function init3d() {
+  // const torus = document.body;
+  document.onpointerdown = torusClicked;
+  document.onpointermove = torusDragged;
+  document.onpointerup = torusLetGo;
+}
+
 
 </script>
 </body>
